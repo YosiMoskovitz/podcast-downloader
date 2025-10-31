@@ -10,14 +10,14 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
 
 from database import PodcastDatabase
 
-from podcasts import bp as podcasts_bp
-from interval import bp as interval_bp
-from episodes import bp as episodes_bp
-from logs import bp as logs_bp
-from gdrive import bp as gdrive_bp
-from dbviewer import bp as dbviewer_bp
-from task import bp as task_bp
-from runhistory import bp as runhistory_bp
+from .podcasts import bp as podcasts_bp
+from .interval import bp as interval_bp
+from .episodes import bp as episodes_bp
+from .logs import bp as logs_bp
+from .gdrive import bp as gdrive_bp
+from .dbviewer import bp as dbviewer_bp
+from .task import bp as task_bp
+from .runhistory import bp as runhistory_bp
 
 app = Flask(__name__)
 
