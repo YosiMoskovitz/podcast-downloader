@@ -1,0 +1,277 @@
+{% extends 'index.html' %}
+{% block content %}
+<div class="container mt-5">
+    <h2>Podcast Service Task Control</h2>
+    
+    <!-- Flash Messages Area -->
+    <div id="messageArea"></div>
+    
+    <div id="statusIndicator" class="mb-3">
+        {% if status.running %}
+            <div class="alert alert-success">
+                <strong>Status:</strong> Running (PID: {{ status.pid }})
+            </div>
+        {% else %}
+            <div class="alert alert-secondary">
+                <strong>Status:</strong> Stopped
+            </div>
+        {% endif %}
+    </div>
+    
+    <div class="mb-4">
+        <button class="btn btn-primary me-2" id="runOnceBtn" onclick="runOnce()">
+            <span class="spinner-border spinner-border-sm me-1" role="status" style="display: none;" id="runOnceSpinner"></span>
+            Run Once
+        </button>
+        {% if status.running %}
+            <button class="btn btn-danger" id="toggleBtn" onclick="toggleTask()">
+                <span class="spinner-border spinner-border-sm me-1" role="status" style="display: none;" id="toggleSpinner"></span>
+                Stop Background Task
+            </button>
+        {% else %}
+            <button class="btn btn-success" id="toggleBtn" onclick="toggleTask()">
+                <span class="spinner-border spinner-border-sm me-1" role="status" style="display: none;" id="toggleSpinner"></span>
+                Start Background Task
+            </button>
+        {% endif %}
+    </div>
+    <!-- Current action area for Run Once (single user-friendly line) -->
+    <div id="runOnceProgressContainer" style="display: none;">
+        <h5>Run Once</h5>
+        <div id="runOnceCurrentAction" class="alert alert-secondary" role="status" style="min-height:40px;display:none;"></div>
+    </div>
+    
+    <div class="alert alert-info">
+        <strong>Info:</strong> The background task will run podcasts on schedule. "Run Once" will process podcasts immediately.
+    </div>
+</div>
+
+<script>
+function showMessage(message, category) {
+    const messageArea = document.getElementById('messageArea');
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${category} alert-dismissible fade show`;
+    alertDiv.role = 'alert';
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    `;
+    messageArea.appendChild(alertDiv);
+    
+    // Auto-dismiss after 5 seconds
+    setTimeout(() => {
+        alertDiv.classList.remove('show');
+        setTimeout(() => alertDiv.remove(), 150);
+    }, 5000);
+}
+
+function runOnce() {
+    const btn = document.getElementById('runOnceBtn');
+    const spinner = document.getElementById('runOnceSpinner');
+    const progressContainer = document.getElementById('runOnceProgressContainer');
+    const actionDiv = document.getElementById('runOnceCurrentAction');
+
+    // Prepare UI
+    btn.disabled = true;
+    spinner.style.display = 'inline-block';
+    progressContainer.style.display = 'block';
+    actionDiv.style.display = 'block';
+    actionDiv.className = 'alert alert-info';
+    actionDiv.textContent = 'Starting...';
+
+    // Use Server-Sent Events to stream progress from the server
+    const es = new EventSource('/task/run-once-stream');
+
+    function simplifyMessage(line) {
+        let text = (line || '').trim();
+        if (!text) return '';
+
+        // Try to strip common Python logging prefixes like:
+        // 2025-10-30 11:38:02,562 - __main__ - INFO - Processing ...
+        // or: INFO:root:Processing ...
+        try {
+            // First try a regex that captures message after the typical 'date - module - LEVEL - message'
+            const m = text.match(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(?:,\d+)?\s*-\s*[^-]+\s*-\s*[A-Z]+\s*-\s*(.*)$/);
+            if (m && m[1]) {
+                text = m[1].trim();
+            } else {
+                // Try INFO:root:Message or LEVEL:module:Message
+                const m2 = text.match(/^[A-Z]+:[^:]+:\s*(.*)$/);
+                if (m2 && m2[1]) text = m2[1].trim();
+                else {
+                    // Fallback: if there are at least 3 ' - ' parts, take everything after the 3rd
+                    const parts = text.split(' - ');
+                    if (parts.length >= 4) text = parts.slice(3).join(' - ').trim();
+                }
+            }
+        } catch (e) {
+            // ignore and use original text
+        }
+
+        // Map raw messages to nicer user-friendly phrases
+        function mapFriendly(t) {
+            // Patterns are matched case-insensitively
+            const mappings = [
+                {
+                    // e.g. "Processing 5 latest episodes for PBD"
+                    pattern: /Processing\s+(\d+)\s+latest episodes for\s+(.+)$/i,
+                    fn: (m) => `Checking ${m[2].trim()} for ${m[1]} latest episodes`
+                },
+                {
+                    // e.g. "Checking feed for ..." or "Checking feed"
+                    pattern: /Checking feed(?: for)?\s*(.*)$/i,
+                    fn: (m) => m[1] ? `Checking feed: ${m[1].trim()}` : 'Checking feed for updates'
+                },
+                {
+                    // e.g. "Downloading https://.../episode.mp3"
+                    pattern: /Downloading\s+(.+)$/i,
+                    fn: (m) => `Downloading ${m[1].split('/').pop()}`
+                },
+                {
+                    // e.g. "Saved file: /path/to/..mp3" or "Saved: ..."
+                    pattern: /Saved(?: file)?:\s*(.+)$/i,
+                    fn: (m) => `Saved ${m[1].split('/').pop()}`
+                },
+                {
+                    // e.g. "No new episodes"
+                    pattern: /no new episodes/i,
+                    fn: () => 'No new episodes found'
+                },
+                {
+                    // Generic: "Found X episodes"
+                    pattern: /Found\s+(\d+)\s+episodes?/i,
+                    fn: (m) => `Found ${m[1]} episodes`
+                }
+            ];
+
+            for (const map of mappings) {
+                const m = t.match(map.pattern);
+                if (m) return map.fn(m);
+            }
+            return null;
+        }
+
+        const friendly = mapFriendly(text);
+        if (friendly) text = friendly;
+
+        // Shorten very long lines for the UI
+        if (text.length > 120) text = text.slice(0, 117) + '...';
+        return text;
+    }
+
+    es.onmessage = function(e) {
+        // Show only the latest user-friendly action line
+        const raw = e.data || '';
+        const friendly = simplifyMessage(raw);
+        if (!friendly) return;
+
+        // Mark errors if the message looks like one
+        if (/error|traceback|exception|failed/i.test(raw)) {
+            actionDiv.className = 'alert alert-danger';
+        } else {
+            actionDiv.className = 'alert alert-secondary';
+        }
+        actionDiv.textContent = friendly;
+    };
+
+    es.addEventListener('done', function(e) {
+        // When server signals completion, e.data contains the return code
+        const code = parseInt(e.data || '1', 10);
+        if (code === 0) {
+            actionDiv.className = 'alert alert-success';
+            actionDiv.textContent = 'Completed successfully.';
+            showMessage('Podcast service ran once successfully!', 'success');
+        } else {
+            actionDiv.className = 'alert alert-danger';
+            actionDiv.textContent = 'Finished with errors. Check logs.';
+            showMessage('Run once finished with errors (check logs).', 'danger');
+        }
+        // cleanup
+        es.close();
+        btn.disabled = false;
+        spinner.style.display = 'none';
+    });
+
+    es.onerror = function(evt) {
+        // SSE connection error
+        actionDiv.className = 'alert alert-warning';
+        actionDiv.textContent = 'Connection lost. Showing summary only.';
+        showMessage('Error streaming run-once progress. Falling back to summary.', 'warning');
+        es.close();
+        btn.disabled = false;
+        spinner.style.display = 'none';
+    };
+}
+
+function toggleTask() {
+    const btn = document.getElementById('toggleBtn');
+    const spinner = document.getElementById('toggleSpinner');
+    
+    btn.disabled = true;
+    spinner.style.display = 'inline-block';
+    
+    fetch('/task/toggle', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showMessage(data.message, 'success');
+            // Refresh status after a short delay
+            setTimeout(() => {
+                location.reload();
+            }, 1000);
+        } else {
+            showMessage(data.message, 'danger');
+        }
+    })
+    .catch(error => {
+        showMessage('Error: ' + error.message, 'danger');
+    })
+    .finally(() => {
+        btn.disabled = false;
+        spinner.style.display = 'none';
+    });
+}
+
+// Auto-refresh status every 5 seconds
+setInterval(function() {
+    fetch('/task/status')
+        .then(response => response.json())
+        .then(data => {
+            const statusDiv = document.getElementById('statusIndicator');
+            if (data.running) {
+                statusDiv.innerHTML = `
+                    <div class="alert alert-success">
+                        <strong>Status:</strong> Running (PID: ${data.pid})
+                    </div>
+                `;
+            } else {
+                statusDiv.innerHTML = `
+                    <div class="alert alert-secondary">
+                        <strong>Status:</strong> Stopped
+                    </div>
+                `;
+            }
+        })
+        .catch(error => console.error('Error refreshing status:', error));
+}, 5000);
+
+// Also check Google Drive connection and disable controls if not connected
+fetch('/gdrive/status')
+    .then(r => r.json())
+    .then(data => {
+        if (!data.connected) {
+            const runBtn = document.getElementById('runOnceBtn');
+            const toggleBtn = document.getElementById('toggleBtn');
+            if (runBtn) runBtn.disabled = true;
+            if (toggleBtn) toggleBtn.disabled = true;
+            showMessage('Google Drive not connected — authentication required before running the service.', 'warning');
+        }
+    })
+    .catch(err => console.error('Failed to check Drive status:', err));
+</script>
+{% endblock %}

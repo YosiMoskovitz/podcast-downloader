@@ -1,0 +1,50 @@
+services:
+  # Web service (Flask dashboard)
+  - type: web
+    name: podcast-downloader-web
+    env: python
+    runtime: python-3.11
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn dashboard.app:app --bind 0.0.0.0:$PORT --workers 2
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: DATABASE_URL
+        fromDatabase:
+          name: podcast-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: GOOGLE_CREDENTIALS_BASE64
+        sync: false  # Set manually in Render dashboard
+      - key: GOOGLE_TOKEN_BASE64
+        sync: false  # Set manually after OAuth flow
+      - key: PODCASTS_CONFIG
+        sync: false  # Set manually with your podcast configuration
+
+  # Background worker (podcast processor)
+  - type: worker
+    name: podcast-downloader-worker
+    env: python
+    runtime: python-3.11
+    buildCommand: pip install -r requirements.txt
+    startCommand: python main.py
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: DATABASE_URL
+        fromDatabase:
+          name: podcast-db
+          property: connectionString
+      - key: GOOGLE_CREDENTIALS_BASE64
+        sync: false
+      - key: GOOGLE_TOKEN_BASE64
+        sync: false
+      - key: PODCASTS_CONFIG
+        sync: false
+
+databases:
+  - name: podcast-db
+    databaseName: podcast_data
+    user: podcast_user
+    plan: free  # Free tier PostgreSQL

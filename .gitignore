@@ -1,0 +1,13 @@
+# Ignore sensitive and runtime files
+config/credentials.json
+token.json
+.env
+__pycache__/
+.venv/
+venv/
+*.pyc
+*.pyo
+*.pyd
+*.log
+instance/
+secrets/

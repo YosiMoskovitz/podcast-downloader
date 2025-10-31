@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Podcast Downloader Dashboard</title>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    </head>
+    <body>
+        <div class="dash-app d-flex">
+            <nav class="sidebar bg-dark text-white p-3">
+                <a class="sidebar-brand d-flex align-items-center mb-3 text-decoration-none text-white" href="/">
+                    <div class="me-2 display-6">🎧</div>
+                    <div>
+                        <div class="h6 mb-0">Podcast</div>
+                        <small class="text-muted">Downloader</small>
+                    </div>
+                </a>
+                <hr class="text-secondary">
+                <ul class="nav flex-column">
+                    <li class="nav-item"><a class="nav-link text-white" href="/podcasts"><i class="bi bi-list-ul me-2"></i>Podcasts</a></li>
+                    <li class="nav-item"><a class="nav-link text-white" href="/interval"><i class="bi bi-clock-history me-2"></i>Interval</a></li>
+                    <li class="nav-item"><a class="nav-link text-white" href="/episodes"><i class="bi bi-music-note-list me-2"></i>Episodes</a></li>
+                    <li class="nav-item"><a class="nav-link text-white" href="/gdrive"><i class="bi bi-cloud-arrow-up me-2"></i>Google Drive</a></li>
+                    <li class="nav-item"><a class="nav-link text-white" href="/logs"><i class="bi bi-journal-text me-2"></i>Logs</a></li>
+                    <li class="nav-item"><a class="nav-link text-white" href="/db"><i class="bi bi-database me-2"></i>DB Viewer</a></li>
+                    <li class="nav-item"><a class="nav-link text-white" href="/task"><i class="bi bi-play-btn me-2"></i>Task Control</a></li>
+                    <li class="nav-item"><a class="nav-link text-white" href="/runhistory"><i class="bi bi-clock me-2"></i>Run History</a></li>
+                </ul>
+            </nav>
+
+            <div class="main flex-grow-1">
+                <header class="d-flex align-items-center justify-content-between p-3 border-bottom bg-white">
+                    <div class="d-flex align-items-center">
+                        <button id="sidebarToggle" class="btn btn-outline-secondary btn-sm me-3 d-md-none"><i class="bi bi-list"></i></button>
+                        <h1 class="h4 mb-0">Podcast Downloader Dashboard</h1>
+                    </div>
+                    <div class="d-flex align-items-center">
+                        <small class="text-muted me-3">Service: <span id="serviceStatus">idle</span></small>
+                        <div id="gdriveIndicator">
+                            <span class="badge bg-secondary" id="gdriveStatusBadge">Drive: unknown</span>
+                            <button id="gdriveAuthBtn" class="btn btn-sm btn-outline-primary ms-2" style="display:none;">Authorize Drive</button>
+                        </div>
+                    </div>
+                </header>
+
+                <div class="container-fluid p-4">
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                            {% if messages %}
+                                    {% for category, message in messages %}
+                                            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                                                    {{ message }}
+                                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                            </div>
+                                    {% endfor %}
+                            {% endif %}
+                    {% endwith %}
+
+                    {% block content %}
+                    <div class="row mb-4">
+                        <div class="col-md-3">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h6 class="card-title">Episodes</h6>
+                                    <h2 class="card-text">{{ total_episodes or 0 }}</h2>
+                                    <small class="text-muted">Total downloaded episodes</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h6 class="card-title">Podcasts</h6>
+                                    <h2 class="card-text">{{ total_podcasts or 0 }}</h2>
+                                    <small class="text-muted">Distinct podcasts</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h6 class="card-title">Storage</h6>
+                                    <h2 class="card-text">{{ '%.2f' % ((total_size_bytes or 0) / 1024.0 / 1024.0) }} MB</h2>
+                                    <small class="text-muted">Total size of downloaded files</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h6 class="card-title">Downloads</h6>
+                                    <h2 class="card-text">{{ downloads_files or 0 }}</h2>
+                                    <small class="text-muted">Files in downloads ({{ '%.2f' % ((downloads_bytes or 0)/1024.0/1024.0) }} MB)</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-7">
+                            <div class="card mb-3">
+                                <div class="card-header">Recent Run History</div>
+                                <div class="card-body p-0">
+                                    {% if recent_runs %}
+                                    <div class="table-responsive">
+                                        <table class="table table-sm mb-0">
+                                            <thead>
+                                                <tr>
+                                                    <th>Timestamp</th>
+                                                    <th>Type</th>
+                                                    <th>Status</th>
+                                                    <th>Message</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for r in recent_runs %}
+                                                <tr>
+                                                    <td>{{ r.timestamp }}</td>
+                                                    <td>{{ r.run_type }}</td>
+                                                    <td>{{ r.status }}</td>
+                                                    <td>{{ r.message or '' }}</td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    {% else %}
+                                        <div class="p-3">No run history available.</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <div class="card">
+                                <div class="card-header">Logs (tail)</div>
+                                <div class="card-body">
+                                    {% if logs_tail %}
+                                        <pre style="max-height:300px;overflow:auto;">{{ logs_tail }}</pre>
+                                    {% else %}
+                                        <div class="text-muted">No logs available.</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-5">
+                            <div class="card mb-3">
+                                <div class="card-header">System</div>
+                                <div class="card-body">
+                                    <dl class="row mb-0">
+                                        <dt class="col-sm-5">PID file</dt>
+                                        <dd class="col-sm-7">{{ pid or 'not running' }}</dd>
+
+                                        <dt class="col-sm-5">Generated</dt>
+                                        <dd class="col-sm-7"><small class="text-muted">{{ generated_at }}</small></dd>
+                                    </dl>
+                                </div>
+                            </div>
+
+                            <div class="card">
+                                <div class="card-header">Quick Links</div>
+                                <div class="card-body">
+                                    <a href="/podcasts" class="btn btn-sm btn-outline-primary mb-2">Podcasts</a>
+                                    <a href="/episodes" class="btn btn-sm btn-outline-secondary mb-2">Episodes</a>
+                                    <a href="/logs" class="btn btn-sm btn-outline-info mb-2">Full Logs</a>
+                                    <a href="/gdrive" class="btn btn-sm btn-outline-success mb-2">Google Drive</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% endblock %}
+                </div>
+            </div>
+        </div>
+
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+        <script>
+            document.getElementById('sidebarToggle')?.addEventListener('click', function(){
+                document.querySelector('.sidebar')?.classList.toggle('collapsed');
+            });
+
+            async function refreshGDriveStatus(){
+                try{
+                    // Add cache-busting to avoid stale responses
+                    const url = '/gdrive/status?_=' + Date.now();
+                    const resp = await fetch(url, { cache: 'no-store' });
+                    if(!resp.ok) throw new Error('Status fetch failed');
+                    const data = await resp.json();
+                    const badge = document.getElementById('gdriveStatusBadge');
+                    const btn = document.getElementById('gdriveAuthBtn');
+                    // Expose server message as tooltip for quick inspection
+                    if(data && data.message) badge.title = data.message;
+                    if(data.connected){
+                        badge.className = 'badge bg-success';
+                        badge.textContent = 'Drive: connected';
+                        if(btn) btn.style.display = 'none';
+                    } else {
+                        badge.className = 'badge bg-danger';
+                        badge.textContent = 'Drive: not connected';
+                        if(btn) btn.style.display = 'inline-block';
+                    }
+                }catch(err){
+                    const badge = document.getElementById('gdriveStatusBadge');
+                    badge.className = 'badge bg-warning';
+                    badge.textContent = 'Drive: status error';
+                }
+            }
+
+            document.getElementById('gdriveAuthBtn')?.addEventListener('click', function(){
+                // Redirect to start the web-based OAuth flow
+                window.location = '/gdrive/start_auth';
+            });
+
+            // Initial load
+            refreshGDriveStatus();
+        </script>
+    </body>
+</html>

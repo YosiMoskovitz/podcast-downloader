@@ -1,0 +1,8 @@
+{% extends 'index.html' %}
+{% block content %}
+<div class="container mt-5">
+    <h2>Logs & Status</h2>
+    <a class="btn btn-secondary mb-3" href="/logs/download">Download Full Log</a>
+    <pre style="background:#222;color:#eee;padding:1em;max-height:600px;overflow:auto;">{{ log_content }}</pre>
+</div>
+{% endblock %}

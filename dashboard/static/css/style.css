@@ -1,0 +1,75 @@
+/* Modern dashboard styles for sidebar and main area */
+:root{
+  --sidebar-width:220px;
+  --sidebar-collapsed:60px;
+}
+.dash-app{min-height:100vh}
+.sidebar{
+  width:var(--sidebar-width);
+  min-height:100vh;
+  transition:width .2s ease;
+}
+.sidebar.collapsed{width:var(--sidebar-collapsed)}
+.sidebar .nav-link{color:rgba(255,255,255,.9)}
+.sidebar .nav-link:hover{background:rgba(255,255,255,.03);border-radius:6px}
+.sidebar .sidebar-brand{font-weight:700}
+.main{background:#f7f9fb;min-height:100vh}
+.header{background:#fff;border-bottom:1px solid #e9ecef}
+@media (max-width:768px){
+  .sidebar{position:fixed;z-index:1040;left:0;top:0;bottom:0;transform:translateX(-100%);}
+  .sidebar.collapsed{transform:translateX(0);}
+}
+.container-fluid p-0{padding:0}
+
+/* small tweaks for table and buttons */
+.table thead th{background:#fff}
+.btn-outline-primary{border-radius:6px}
+
+/* visually distinct card for main content */
+.content-card{background:#fff;padding:20px;border-radius:10px;box-shadow:0 2px 6px rgba(12,15,20,0.04)}
+
+/* DB viewer: keep cells on a single line but don't give each cell its own scrollbar.
+   The table container will be made scrollable instead so the page itself doesn't scroll. */
+.db-cell-scroll{
+  max-width:460px;
+  overflow:hidden;              /* hide per-cell scrollbars */
+  white-space:nowrap;          /* keep content on one line */
+  text-overflow:ellipsis;      /* show ellipsis for overflow */
+  display:block;
+  padding:4px 6px;
+}
+
+/* Make the table container on the DB viewer page scrollable instead of the whole page.
+   Limits vertical height so the page won't scroll; enables both vertical and horizontal scrolling
+   inside the table area when needed. Target only the DB viewer using the page marker class. */
+.content-card.dbviewer .table-responsive{
+  max-height: calc(100vh - 220px); /* adjust to leave room for headers/controls */
+  overflow-y: auto;                /* vertical scrolling inside table area */
+  overflow-x: auto;                /* horizontal scrolling for wide tables */
+}
+
+/* Optional: slightly reduce table row height inside DB viewer for denser display */
+.content-card.dbviewer table.table-sm td, .content-card.dbviewer table.table-sm th{
+  vertical-align:middle;
+  padding-top:6px;
+  padding-bottom:6px;
+}
+
+/* Prevent the DB viewer page from creating a horizontal scrollbar on the body.
+   Force the table container to be limited to the card width and scroll internally. */
+.content-card.dbviewer{
+  overflow-x: hidden; /* don't allow the content-card to expand page width */
+}
+
+.content-card.dbviewer .table-responsive{
+  max-width: 100%;    /* ensure container doesn't exceed the card width */
+  display: block;     /* make overflow-x behave predictably */
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Allow the table itself to be wider than the container so it scrolls inside it
+   instead of pushing the page width. */
+.content-card.dbviewer .table-responsive > table{
+  width: auto;        /* let table determine its own width */
+  min-width: 100%;    /* at least as wide as the container */
+}

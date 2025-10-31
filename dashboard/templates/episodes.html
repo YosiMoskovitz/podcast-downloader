@@ -1,0 +1,39 @@
+{% extends 'index.html' %}
+{% block content %}
+<div class="container mt-5">
+    <h2>Episodes on Google Drive</h2>
+    {% for podcast, episodes in podcasts.items() %}
+        <h4 class="mt-4">{{ podcast }}</h4>
+        {% if episodes %}
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Title</th>
+                    <th>Uploaded</th>
+                    <th>Google Drive Link</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for ep in episodes %}
+            <tr>
+                <td>{{ ep.id }}</td>
+                <td>{{ ep.title }}</td>
+                <td>{{ ep.uploaded }}</td>
+                <td>
+                    {% if ep.url %}
+                        <a class="btn btn-success btn-sm" href="{{ ep.url }}" target="_blank">View/Download</a>
+                    {% else %}
+                        <span class="text-muted">Not uploaded</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="text-muted">No episodes found.</div>
+        {% endif %}
+    {% endfor %}
+</div>
+{% endblock %}

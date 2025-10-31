@@ -1,0 +1,79 @@
+{% extends 'index.html' %}
+{% block content %}
+<div class="container mt-5">
+    <h2>Google Drive API & Folders</h2>
+    <div class="mb-3 d-flex align-items-stretch" style="gap: 16px;">
+        {% if gdrive_connected %}
+            <div class="alert alert-success flex-grow-1">Google Drive connected: {{ gdrive_status_msg }}</div>
+        {% else %}
+            <div class="alert alert-danger flex-grow-1 m-0 d-flex align-items-center" style="flex-basis: 80%; min-height: 56px;">Google Drive not connected: {{ gdrive_status_msg }}
+                <form method="get" action="{{ url_for('gdrive.start_auth') }}" class="d-inline">
+                    <button class="btn btn-sm btn-primary ms-2">Start OAuth Flow</button>
+                </form>
+            </div>
+                <div class="card m-0 d-flex align-items-center justify-content-center" style="flex-basis: 20%; min-width: 180px; max-width: 220px; min-height: 56px;">
+                    <div class="card-body p-2 text-center">
+                        {% if insecure_transport %}
+                            <div class="alert alert-success p-2 mb-1" style="font-size: 0.85rem;">Local OAuth insecure transport is <b>ENABLED</b></div>
+                            <div class="form-text text-success mt-1" style="font-size: 0.72rem; line-height: 1.1;">OAuth over HTTP is active for local testing.</div>
+                        {% else %}
+                            <form method="post" action="{{ url_for('gdrive.set_insecure_transport') }}">
+                                <button class="btn btn-danger btn-xs px-2 py-1" style="font-size: 0.85rem; line-height: 1.1; white-space: pre-line;">
+                                    This is a local deployment
+                                    <br>(not safe)
+                                </button>
+                            </form>
+                            <div class="form-text text-danger mt-1" style="font-size: 0.72rem; line-height: 1.1;">Enables OAuth over HTTP for local testing.<br>Do not use in production!</div>
+                        {% endif %}
+                    </div>
+                </div>
+        {% endif %}
+    </div>
+    <div class="alert alert-success mb-4">
+        <h5 class="alert-heading">✅ Automatic Credential Persistence</h5>
+        <p class="mb-2">When you upload credentials or complete the OAuth flow, they are automatically saved to the database.</p>
+        <p class="mb-0"><strong>Your credentials will persist across deployments</strong> - no additional configuration needed!</p>
+    </div>
+
+    <h4>Upload Credentials & Token Files</h4>
+    <p class="text-muted">Upload your Google OAuth credentials and token to enable Google Drive uploads.</p>
+    
+    <form method="post" enctype="multipart/form-data" class="mb-3">
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label class="form-label">Upload credentials.json</label>
+                <div class="input-group">
+                    <input type="file" name="credentials_file" accept="application/json,.json" class="form-control">
+                    <button class="btn btn-secondary" type="submit">Upload</button>
+                </div>
+                <div class="form-text">OAuth client credentials from Google Cloud Console</div>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Upload token.json (optional)</label>
+                <div class="input-group">
+                    <input type="file" name="token_file" accept="application/json,.json" class="form-control">
+                    <button class="btn btn-secondary" type="submit">Upload</button>
+                </div>
+                <div class="form-text">If you have an existing token, or complete OAuth flow below</div>
+            </div>
+        </div>
+    </form>
+
+    <div class="mb-3">
+            {% if creds_source == 'local' %}
+                <div class="alert alert-success">Credentials: <strong>Present</strong> (stored on server filesystem)</div>
+            {% else %}
+                <div class="alert alert-warning">Credentials: <strong>Not found</strong></div>
+            {% endif %}
+            <div class="form-text">For safety the credential contents are not shown in the UI. Use the upload button to replace credentials.</div>
+        </div>
+
+    <h4>Podcast Folders on Google Drive</h4>
+    <ul class="list-group mb-3">
+        {% for folder in folders %}
+        <li class="list-group-item">{{ folder }}</li>
+        {% endfor %}
+    </ul>
+    <div class="alert alert-info">To change folder names, edit the podcast entries in the Podcasts page.</div>
+</div>
+{% endblock %}

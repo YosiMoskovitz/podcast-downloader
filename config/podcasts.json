@@ -1,0 +1,40 @@
+{
+  "podcasts": [
+    {
+      "name": "מיכה סטוקס",
+      "rss_url": "https://anchor.fm/s/f738aa0c/podcast/rss",
+      "folder_name": "מיכה סטוקס",
+      "enabled": true
+    },
+    {
+      "name": "Example News Podcast",
+      "rss_url": "https://example.com/news-podcast/rss",
+      "folder_name": "News Podcast",
+      "enabled": false
+    },
+    {
+      "name": "The Race F1 Podcast",
+      "rss_url": "https://feeds.acast.com/public/shows/6819ae2bf30c20bff775e8a1",
+      "folder_name": "The Race F1 Podcast",
+      "enabled": true
+    },
+    {
+      "name": "PBD",
+      "rss_url": "https://anchor.fm/s/2fa50a94/podcast/rss",
+      "folder_name": "PBD Podcast",
+      "enabled": true,
+      "keep_count": 10
+    },
+    {
+      "name": "History Daily",
+      "rss_url": "https://rss.art19.com/history-daily",
+      "folder_name": "History Daily",
+      "enabled": true
+    }
+  ],
+  "settings": {
+    "check_interval_hours": 2,
+    "max_episodes_per_check": 5,
+    "download_quality": "high"
+  }
+}

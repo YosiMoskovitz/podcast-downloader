@@ -1,0 +1,22 @@
+{% extends 'index.html' %}
+{% block content %}
+<div class="container mt-5">
+    <h2>Set RSS Check Interval</h2>
+    <form method="post" class="mb-4">
+        <div class="row g-2 align-items-center">
+            <div class="col-auto">
+                <label for="interval" class="col-form-label">Check every</label>
+            </div>
+            <div class="col-auto">
+                <input type="number" min="1" name="check_interval_hours" id="interval" class="form-control" value="{{ interval }}" required>
+            </div>
+            <div class="col-auto">
+                <span class="form-text">hours</span>
+            </div>
+            <div class="col-auto">
+                <button class="btn btn-primary" type="submit">Update</button>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
