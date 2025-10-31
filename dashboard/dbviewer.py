@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, flash
 import os
-from db_helper import get_connection
+from .db_helper import get_connection
 
 bp = Blueprint('dbviewer', __name__, template_folder='templates')
 

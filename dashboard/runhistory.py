@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template
 import os
 import logging
-from db_helper import get_connection
+from .db_helper import get_connection
 
 bp = Blueprint('runhistory', __name__, template_folder='templates')
 
